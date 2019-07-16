@@ -1,6 +1,7 @@
 import urllib.parse
 import requests
 import json
+import types
 
 class Confluence:
     def __init__(self, url, username, password):
@@ -59,6 +60,10 @@ class Confluence:
             download_uri = each_file['_links']['download']
             download_full_url = f"{self._url}{download_uri}"
             each_file['download_url'] = download_full_url
+            def get_content():
+                res = requests.get(download_full_url, auth=self._auth)
+                return res.text
+            each_file['get_content'] = get_content
             return each_file
 
         attachments = map(lambda each_file: add_download_url(each_file), get_attachments_json['results'])

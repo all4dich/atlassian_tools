@@ -1,5 +1,5 @@
 import sys
-from . import hello
+from atlassian import hello
 
 def main():
     hello.world()

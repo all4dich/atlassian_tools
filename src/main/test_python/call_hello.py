@@ -1,3 +1,3 @@
-from atlassian import hello
+from atlassian_tools import hello
 
 hello.world()

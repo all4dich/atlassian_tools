@@ -41,7 +41,7 @@ class Confluence:
         self._password = value
 
     def get_page(self, space_key, title):
-        page_info_url = f"{self._api_root}/content?expand=ancestors&spaceKey={space_key}&title=" + urllib.parse.quote(title)
+        page_info_url = f"{self._api_root}/content?expand=ancestors,body.storage&spaceKey={space_key}&title=" + urllib.parse.quote(title)
         page_info_res = requests.get(page_info_url, auth=self._auth)
         return json.loads(page_info_res.text)['results'][0]
 

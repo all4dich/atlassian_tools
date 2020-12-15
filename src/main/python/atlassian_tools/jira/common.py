@@ -44,12 +44,12 @@ class Jira:
     def password(self, value):
         self._password = value
 
-    def get_today_work_logs(self, user_name=None):
+    def get_work_logs(self, user_name=None, work_log_date='startOfDay()'):
         if user_name is None:
             queried_user = self._username
         else:
             queried_user = user_name
-        query_string = f"worklogDate = startOfDay() and worklogAuthor = '{queried_user}'"
+        query_string = f"worklogDate = {work_log_date} and worklogAuthor = '{queried_user}'"
         query_str_converted = quote(query_string)
         api_path = "search?jql=" + query_str_converted
         query_url = f"{self._api_root}{api_path}"
@@ -83,3 +83,5 @@ class Jira:
                     work_logs_returned[work_log_key].append(work_log)
         return work_logs_returned
 
+    def get_today_work_logs(self, user_name=None):
+        return self.get_work_logs(user_name=user_name)

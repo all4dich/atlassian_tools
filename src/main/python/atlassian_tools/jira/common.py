@@ -44,7 +44,7 @@ class Jira:
     def password(self, value):
         self._password = value
 
-    def today_worklogs(self, user_name=None):
+    def get_today_work_logs(self, user_name=None):
         if user_name is None:
             queried_user = self._username
         else:
@@ -64,7 +64,11 @@ class Jira:
         today_start_obj = datetime.datetime.strptime(today_start_str, date_time_format_wo_tz)
         today_start_obj_with_tz = current_tz.localize(today_start_obj)
 
+        work_logs_returned = {}
         for each_issue in issues:
+            issue_key = each_issue['key']
+            issue_summary = each_issue['fields']['summary']
+            work_log_key = f"{issue_key}:{issue_summary}"
             logging.warning(f"Get work logs for an issue = {each_issue['key']}")
             get_issue_worklog_url = f"{self._api_root}issue/{each_issue['key']}/worklog"
             r = requests.get(get_issue_worklog_url, auth=(self._username, self._password))
@@ -74,5 +78,8 @@ class Jira:
                 started_date = work_log['started']
                 start_date_obj = datetime.datetime.strptime(started_date, date_time_format_with_tz)
                 if start_date_obj > today_start_obj_with_tz:
-                    print(work_log)
+                    if work_log_key not in work_logs_returned:
+                        work_logs_returned[work_log_key] = []
+                    work_logs_returned[work_log_key].append(work_log)
+        return work_logs_returned
 

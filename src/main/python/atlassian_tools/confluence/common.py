@@ -1,5 +1,6 @@
 import urllib.parse
 import requests
+from requests.auth import HTTPBasicAuth
 import json
 import types
 import logging
@@ -43,7 +44,8 @@ class Confluence:
         self._password = value
 
     def get_page(self, space_key, title):
-        page_info_url = f"{self._api_root}/content?expand=ancestors,body.storage&spaceKey={space_key}&title=" + urllib.parse.quote(title)
+        page_info_url = f"{self._api_root}/content?expand=ancestors,body.storage&spaceKey={space_key}&title=" + urllib.parse.quote(
+            title)
         page_info_res = requests.get(page_info_url, auth=self._auth)
         return json.loads(page_info_res.text)['results'][0]
 
@@ -76,17 +78,56 @@ class Confluence:
 
 
 class ConfluenceManager:
+    _rest_api_path: str
+
     def __init__(self, url, username, password):
-        self.url = url
-        self.username = username
-        self.password = password
+        self._url = url
+        self._rest_api_path = f"{self._url}/rest/api"
+        self._username = username
+        self._password = password
         self.rpc_root = "/rpc/json-rpc/confluenceservice-v2/"
-        self.rpc_path = f"{self.url}{self.rpc_root}"
+        self.rpc_path = f"{self._url}{self.rpc_root}"
         self.permissions = ["VIEWSPACE", "EDITSPACE", "EXPORTPAGE", "SETPAGEPERMISSIONS", "REMOVEPAGE", "EDITBLOG",
                             "REMOVEBLOG", "COMMENT", "REMOVECOMMENT", "CREATEATTACHMENT", "REMOVEATTACHMENT",
                             "REMOVEMAIL",
                             "EXPORTSPACE", "SETSPACEPERMISSIONS"]
+        self.read_permissions = ["VIEWSPACE", "COMMENT"]
         logging.warning(f"{self.__class__.__name__}'s instance has been initialized with url = {self.url}")
+
+    @property
+    def url(self):
+        return self._url
+
+    @url.setter
+    def url(self, value):
+        self._url = value
+        self._rest_api_path = f"{self._url}/rest/api"
+
+    @property
+    def api_root(self):
+        return self._rest_api_path
+
+    @property
+    def username(self):
+        return self._username
+
+    @username.setter
+    def username(self, value):
+        self._username = value
+
+    @property
+    def password(self):
+        return self._password
+
+    @password.setter
+    def password(self, value):
+        self._password = value
+
+    def test(self):
+        print(self.username)
+        print(self.password)
+        print(self.rpc_path)
+        print(self._rest_api_path)
 
     def get_space_permissions(self, spaceKey):
         api_url = self.rpc_path + "getSpacePermissionSets"
@@ -128,3 +169,21 @@ class ConfluenceManager:
             logging.warning(
                 f"Remove a permission {permission_name} for entity {entity_name} from {spaceKey}, with response code "
                 f"{res.status_code}")
+
+    def give_read_permissions_to_entity(self, userName, spaceKey):
+        """
+
+        :param userName: User account name
+        :param spaceKey: Confluence Space's Key value
+        :return:
+        """
+        logging.warning(f"{__name__} is called for {userName}, Space = {spaceKey}")
+        input_data = [self.read_permissions, userName, spaceKey]
+        api_url = "{}addPermissionsToSpace".format(self.rpc_path)
+        action_request = requests.post(url=api_url, auth=HTTPBasicAuth(self.username, self.password), json=input_data)
+        action_request.close()
+        if action_request.status_code == 200:
+            logging.info(f"Ok: {userName} is added to {spaceKey}")
+        else:
+            logging.warning(f"Fail: {userName}")
+

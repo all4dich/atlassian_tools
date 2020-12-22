@@ -135,7 +135,7 @@ class ConfluenceManager:
         if res.status_code == 200:
             return json.loads(res.text)
 
-    def get_assigned_users_from_space(self, spaceKey):
+    def get_assigned_entities_from_space(self, spaceKey):
         logging.warning(f"{__name__} is called")
         space_permissions = self.get_space_permissions(spaceKey)
         users = []

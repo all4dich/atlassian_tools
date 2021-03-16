@@ -99,10 +99,12 @@ class Jira:
         issue_info = json.loads(r.text)
         return issue_info
 
-    def get_issue_work_logs_within_two_weeks(self, issue_key):
+    def get_issue_work_logs_within_week(self, issue_key, start_week=None):
         output = []
         today = datetime.now().astimezone()
-        pre_week_start = today - timedelta(weeks=1, days=today.weekday())
+        curr_week_start = today - timedelta(days=today.weekday())
+        if not start_week:
+            start_week = curr_week_start
         worklog_url = f"{self._api_root}issue/{issue_key}/worklog"
         r = requests.get(worklog_url, auth=self._auth)
         work_logs = json.loads(r.text)['worklogs']
@@ -110,7 +112,7 @@ class Jira:
         for each_work_log in work_logs:
             worklog_start = each_work_log['started']
             worklog_start_obj = datetime.strptime(worklog_start, self._jira_datetime_format)
-            if worklog_start_obj > pre_week_start:
+            if worklog_start_obj > start_week:
                 time_spent_seconds = time_spent_seconds + each_work_log['timeSpentSeconds']
                 output.append(each_work_log)
         total_time_spent = timedelta(seconds=time_spent_seconds)

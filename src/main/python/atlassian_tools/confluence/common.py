@@ -4,6 +4,7 @@ from requests.auth import HTTPBasicAuth
 import json
 import types
 import logging
+from urllib.parse import quote
 
 
 class Confluence:
@@ -93,6 +94,7 @@ class ConfluenceManager:
                             "REMOVEMAIL",
                             "EXPORTSPACE", "SETSPACEPERMISSIONS"]
         self.read_permissions = ["VIEWSPACE", "COMMENT"]
+        self._rest_api_content = f"{self._rest_api_path}/content/"
         logging.warning(f"{self.__class__.__name__}'s instance has been initialized with url = {self.url}")
 
     @property
@@ -198,3 +200,25 @@ class ConfluenceManager:
             get_user_info_url = f"{self.api_root}/user/current"
         r = requests.get(get_user_info_url, auth=self._auth)
         return json.loads(r.text)
+
+    def find_page(self, space_key, page_title):
+        find_page_url = f"{self._rest_api_content}?type=page&spaceKey={space_key}&title={quote(page_title)}"
+        find_page = requests.get(find_page_url, auth=self._auth)
+        find_page_result = json.loads(find_page.text)
+        return find_page_result
+
+    def create_page(self, space_key, parent_page, page_title, page_content, page_repr="storage"):
+        page_data = {
+            "type": "page",
+            "title": page_title,
+            "ancestors": [{"id": parent_page}],
+            "space": {"key": space_key},
+            "body": {
+                "storage": {
+                    "value": page_content,
+                    "representation": page_repr
+                }
+            }
+        }
+        create_page_req = requests.post(self._rest_api_content, auth=self._auth, json=page_data)
+        return json.loads(create_page_req.text)

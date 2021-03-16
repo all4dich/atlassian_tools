@@ -85,6 +85,7 @@ class ConfluenceManager:
         self._rest_api_path = f"{self._url}/rest/api"
         self._username = username
         self._password = password
+        self._auth = (username, password)
         self.rpc_root = "/rpc/json-rpc/confluenceservice-v2/"
         self.rpc_path = f"{self._url}{self.rpc_root}"
         self.permissions = ["VIEWSPACE", "EDITSPACE", "EXPORTPAGE", "SETPAGEPERMISSIONS", "REMOVEPAGE", "EDITBLOG",
@@ -187,3 +188,13 @@ class ConfluenceManager:
         else:
             logging.warning(f"Fail: {userName}")
 
+    def get_confluence_user_info(self, target_user=None):
+        # https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-users/#api-rest-api-3-user-get
+        # https://developer.atlassian.com/cloud/confluence/rest/api-group-users/#api-api-user-current-get
+        #   --url 'https://your-domain.atlassian.net/wiki/rest/api/user?accountId={accountId}'\
+        if target_user:
+            get_user_info_url = f"{self.api_root}/user?accountId={target_user}"
+        else:
+            get_user_info_url = f"{self.api_root}/user/current"
+        r = requests.get(get_user_info_url, auth=self._auth)
+        return json.loads(r.text)

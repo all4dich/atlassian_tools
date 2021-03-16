@@ -4,16 +4,17 @@ import types
 import logging
 from urllib.parse import quote
 import pytz
-import datetime
-
+from datetime import date, datetime, timedelta
 
 class Jira:
     def __init__(self, url, username, password):
         self._url = url
         self._api_root = f"{self._url}rest/api/2/"
+        self._search_root = f"{self._api_root}search"
         self._username = username
         self._password = password
         self._auth = (self._username, self._password)
+        self._jira_datetime_format = "%Y-%m-%dT%X.%f%z"
 
     @property
     def url(self):
@@ -60,8 +61,8 @@ class Jira:
         date_time_format_wo_tz = "%Y-%m-%d %H:%M:%S"
         current_tz = pytz.timezone("Asia/Seoul")
 
-        today_start_str = f"{str(datetime.date.today())} 00:00:00"
-        today_start_obj = datetime.datetime.strptime(today_start_str, date_time_format_wo_tz)
+        today_start_str = f"{str(date.today())} 00:00:00"
+        today_start_obj = datetime.strptime(today_start_str, date_time_format_wo_tz)
         today_start_obj_with_tz = current_tz.localize(today_start_obj)
 
         work_logs_returned = {}
@@ -76,7 +77,7 @@ class Jira:
             work_logs = r_body['worklogs']
             for work_log in work_logs:
                 started_date = work_log['started']
-                start_date_obj = datetime.datetime.strptime(started_date, date_time_format_with_tz)
+                start_date_obj = datetime.strptime(started_date, date_time_format_with_tz)
                 if start_date_obj > today_start_obj_with_tz:
                     if work_log_key not in work_logs_returned:
                         work_logs_returned[work_log_key] = []
@@ -85,3 +86,33 @@ class Jira:
 
     def get_today_work_logs(self, user_name=None):
         return self.get_work_logs(user_name=user_name)
+
+    def run_jql_query(self, query_statement):
+        jql_query = {"jql": query_statement}
+        query_req = requests.post(self._search_root, auth=self._auth, json=jql_query)
+        query_res = json.loads(query_req.text)
+        return query_res
+
+    def get_issue_info(self, key):
+        get_issue_info_url = f"{self._api_root}issue/{key}"
+        r = requests.get(get_issue_info_url, auth=self._auth)
+        issue_info = json.loads(r.text)
+        return issue_info
+
+    def get_issue_work_logs_within_two_weeks(self, issue_key):
+        output = []
+        today = datetime.now().astimezone()
+        pre_week_start = today - timedelta(weeks=1, days=today.weekday())
+        worklog_url = f"{self._api_root}issue/{issue_key}/worklog"
+        r = requests.get(worklog_url, auth=self._auth)
+        work_logs = json.loads(r.text)['worklogs']
+        time_spent_seconds = 0
+        for each_work_log in work_logs:
+            worklog_start = each_work_log['started']
+            worklog_start_obj = datetime.strptime(worklog_start, self._jira_datetime_format)
+            if worklog_start_obj > pre_week_start:
+                time_spent_seconds = time_spent_seconds + each_work_log['timeSpentSeconds']
+                output.append(each_work_log)
+        total_time_spent = timedelta(seconds=time_spent_seconds)
+        return {"workLogs": output, "timeSpent": total_time_spent}
+

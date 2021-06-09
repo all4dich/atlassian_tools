@@ -202,7 +202,7 @@ class ConfluenceManager:
         return json.loads(r.text)
 
     def find_page(self, space_key, page_title):
-        find_page_url = f"{self._rest_api_content}?type=page&spaceKey={space_key}&title={quote(page_title)}"
+        find_page_url = f"{self._rest_api_content}?type=page&spaceKey={space_key}&title={quote(page_title)}&expand=version"
         find_page = requests.get(find_page_url, auth=self._auth)
         find_page_result = json.loads(find_page.text)
         return find_page_result
@@ -222,3 +222,22 @@ class ConfluenceManager:
         }
         create_page_req = requests.post(self._rest_api_content, auth=self._auth, json=page_data)
         return json.loads(create_page_req.text)
+
+    def update_page(self, page_title, page_id,  page_content, current_page_version, page_repr="storage"):
+        page_version = int(current_page_version) + 1
+        page_data = {
+             "version": {
+                "number": page_version
+            },
+            "type": "page",
+            "title": page_title,
+            "body": {
+                "storage": {
+                    "value": page_content,
+                    "representation": page_repr
+                }
+            }
+        }
+        update_page_req = requests.put(f"{self._rest_api_content}{page_id}", auth=self._auth, json=page_data)
+        return json.loads(update_page_req.text)
+    
